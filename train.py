@@ -15,6 +15,7 @@ import time
 import random
 import argparse
 import numpy as np
+from datetime import datetime
 
 import torch
 import torch.nn.functional as F
@@ -248,7 +249,7 @@ if __name__ == '__main__':
             if opt.use_tensorboard:
                 for tag, value in errors.items():
                     logger.add_scalar(tag, value, step)
-            message = '( step: %d, ) ' % (step)
+            message = '{}: (step {}) '.format(datetime.now().strftime('%H:%M:%S'), step)
             for k, v in errors.items():
                 message += '%s: %.3f ' % (k, v)
 
