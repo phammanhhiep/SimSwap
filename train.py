@@ -59,10 +59,11 @@ class TrainOptions:
         self.parser.add_argument('--lr', type=float, default=0.0004, help='initial learning rate for adam')
         self.parser.add_argument('--Gdeep', type=str2bool, default='False')
 
-        # for discriminators         
+        # for loss weights
         self.parser.add_argument('--lambda_feat', type=float, default=10.0, help='weight for feature matching loss')
         self.parser.add_argument('--lambda_id', type=float, default=30.0, help='weight for id loss')
-        self.parser.add_argument('--lambda_rec', type=float, default=10.0, help='weight for reconstruction loss') 
+        self.parser.add_argument('--lambda_rec', type=float, default=10.0, help='weight for reconstruction loss')
+        self.parser.add_argument('--lambda_gmain', type=float, default=1.0, help='weight for GAN loss')
 
         self.parser.add_argument("--Arc_path", type=str, default='arcface_model/arcface_checkpoint.tar', help="run ONNX model via TRT")
         self.parser.add_argument("--total_step", type=int, default=1000000, help='total training step')
@@ -183,24 +184,26 @@ if __name__ == '__main__':
             if step%2 == 0:
                 img_id = src_image2
             else:
-                img_id = src_image2[randindex]
+                img_id = src_image2[randindex] # TODO: ???
 
             img_id_112      = F.interpolate(img_id,size=(112,112), mode='bicubic')
             latent_id       = model.netArc(img_id_112)
             latent_id       = F.normalize(latent_id, p=2, dim=1)
+            # Train discriminator
             if interval:
                 
                 img_fake        = model.netG(src_image1, latent_id)
                 gen_logits,_    = model.netD(img_fake.detach(), None)
                 loss_Dgen       = (F.relu(torch.ones_like(gen_logits) + gen_logits)).mean()
 
-                real_logits,_   = model.netD(src_image2,None)
+                real_logits,_   = model.netD(src_image2,None) # NOTE: source is used to train discriminator, in constrast Faceshifter use target.
                 loss_Dreal      = (F.relu(torch.ones_like(real_logits) - real_logits)).mean()
 
                 loss_D          = loss_Dgen + loss_Dreal
                 optimizer_D.zero_grad()
                 loss_D.backward()
                 optimizer_D.step()
+            # Train generator
             else:
                 
                 # model.netD.requires_grad_(True)
@@ -215,7 +218,7 @@ if __name__ == '__main__':
                 loss_G_ID       = (1 - model.cosin_metric(latent_fake, latent_id)).mean()
                 real_feat       = model.netD.get_feature(src_image1)
                 feat_match_loss = model.criterionFeat(feat["3"],real_feat["3"]) 
-                loss_G          = loss_Gmain + loss_G_ID * opt.lambda_id + feat_match_loss * opt.lambda_feat
+                loss_G          = loss_Gmain * opt.lambda_gmain + loss_G_ID * opt.lambda_id + feat_match_loss * opt.lambda_feat
                 
 
                 if step%2 == 0:
