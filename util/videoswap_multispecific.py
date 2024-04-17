@@ -20,7 +20,25 @@ def _totensor(array):
     img = tensor.transpose(0, 1).transpose(0, 2).contiguous()
     return img.float().div(255)
 
+
 def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id_thres, swap_model, detect_model, save_path, temp_results_dir='./temp_results', crop_size=224, no_simswaplogo = False,use_mask =False):
+    """
+    My Note: the author uses confusing parameter names (unintentionally);
+    `target_id_norm_list` are a list of source face, while `source_specific_id_nonorm_list` is a list of target faces found in the video.
+    
+    Args:
+        video_path (TYPE): Description
+        target_id_norm_list (TYPE): Source faces
+        source_specific_id_nonorm_list (TYPE): Target face being swapped
+        id_thres (TYPE): Description
+        swap_model (TYPE): Description
+        detect_model (TYPE): Description
+        save_path (TYPE): Description
+        temp_results_dir (str, optional): Description
+        crop_size (int, optional): Description
+        no_simswaplogo (bool, optional): Description
+        use_mask (bool, optional): Description
+    """
     video_forcheck = VideoFileClip(video_path)
     if video_forcheck.audio is None:
         no_audio = True
@@ -70,33 +88,48 @@ def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id
                 # print(frame_index)
                 if not os.path.exists(temp_results_dir):
                         os.mkdir(temp_results_dir)
-                frame_align_crop_list = detect_results[0]
+                frame_align_crop_list = detect_results[0] # One or more faces
                 frame_mat_list = detect_results[1]
 
                 id_compare_values = [] 
                 frame_align_crop_tenor_list = []
+
+                # Preprocess frame and compare id of source and those in frames
                 for frame_align_crop in frame_align_crop_list:
 
                     # BGR TO RGB
                     # frame_align_crop_RGB = frame_align_crop[...,::-1]
 
                     frame_align_crop_tenor = _totensor(cv2.cvtColor(frame_align_crop,cv2.COLOR_BGR2RGB))[None,...].cuda()
-
+ 
                     frame_align_crop_tenor_arcnorm = spNorm(frame_align_crop_tenor)
                     frame_align_crop_tenor_arcnorm_downsample = F.interpolate(frame_align_crop_tenor_arcnorm, size=(112,112))
                     frame_align_crop_crop_id_nonorm = swap_model.netArc(frame_align_crop_tenor_arcnorm_downsample)
                     id_compare_values.append([])
+                    # My Note: seem unneccessary loop; may turn list source_specific_id_nonorm_list into a tensor, duplicate frame_align_crop_crop_id_nonorm, and perform mse
+                    # My Note: why compare source ids with that a face id from the frame?
                     for source_specific_id_nonorm_tmp in source_specific_id_nonorm_list:
                         id_compare_values[-1].append(mse(frame_align_crop_crop_id_nonorm,source_specific_id_nonorm_tmp).detach().cpu().numpy())
                     frame_align_crop_tenor_list.append(frame_align_crop_tenor)
 
-                id_compare_values_array = np.array(id_compare_values).transpose(1,0)
-                min_indexs = np.argmin(id_compare_values_array,axis=0)
-                min_value = np.min(id_compare_values_array,axis=0)
+                ''' My Note: 
+                - Each tensor in the first dimension represent scores between a target face and faces found in the current frame.
+                - The transpose of id_compare_values is unneccessary too, and it just
+                show the author is not familiar to how np.argmin works. I commented it
+                out and the following np.argmin and np.min too.
+                '''
+                # id_compare_values_array = np.array(id_compare_values).transpose(1,0) 
+                # min_indexs = np.argmin(id_compare_values_array,axis=0)
+                # min_value = np.min(id_compare_values_array,axis=0)
+                id_compare_values_array = np.array(id_compare_values)
+                min_indexs = np.argmin(id_compare_values_array,axis=1)
+                min_value = np.min(id_compare_values_array,axis=1)
 
                 swap_result_list = [] 
                 swap_result_matrix_list = []
                 swap_result_ori_pic_list = []
+
+                # Only detected faces most similar to the target faces are swapped
                 for tmp_index, min_index in enumerate(min_indexs):
                     if min_value[tmp_index] < id_thres:
                         swap_result = swap_model(None, frame_align_crop_tenor_list[tmp_index], target_id_norm_list[min_index], None, True)[0]
@@ -113,6 +146,7 @@ def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id
                     reverse2wholeimage(swap_result_ori_pic_list,swap_result_list, swap_result_matrix_list, crop_size, frame, logoclass,\
                         os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)),no_simswaplogo,pasring_model =net,use_mask=use_mask, norm = spNorm)
                 else:
+                    # save the original frame as image to disk
                     if not os.path.exists(temp_results_dir):
                         os.mkdir(temp_results_dir)
                     frame = frame.astype(np.uint8)
@@ -121,6 +155,7 @@ def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id
                     cv2.imwrite(os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)), frame)
 
             else:
+                # save the original frame as image to disk
                 if not os.path.exists(temp_results_dir):
                     os.mkdir(temp_results_dir)
                 frame = frame.astype(np.uint8)
