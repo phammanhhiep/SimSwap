@@ -40,6 +40,17 @@ class ApplyStyle(nn.Module):
 
 class ResnetBlock_Adain(nn.Module):
     def __init__(self, dim, latent_size, padding_type, activation=nn.ReLU(True)):
+        """The network did NOT change the spatial dimensions of the inputs.
+        
+        Args:
+            dim (TYPE): Description
+            latent_size (TYPE): Description
+            padding_type (TYPE): Description
+            activation (TYPE, optional): Description
+        
+        Raises:
+            NotImplementedError: Description
+        """
         super(ResnetBlock_Adain, self).__init__()
 
         p = 0

@@ -134,7 +134,7 @@ class MultiScaleD(nn.Module):
         mini_discs = []
         for i, (cin, res) in enumerate(zip(self.disc_in_channels, self.disc_in_res)):
             start_sz = res if not patch else 16
-            mini_discs += [str(i), Disc(nc=cin, start_sz=start_sz, end_sz=8, separable=separable, patch=patch)],
+            mini_discs += [str(i), Disc(nc=cin, start_sz=start_sz, end_sz=8, separable=separable, patch=patch)]
         self.mini_discs = nn.ModuleDict(mini_discs)
 
     def forward(self, features, c):

@@ -31,6 +31,11 @@ class SpecificNorm(nn.Module):
         return x
 
 class fsModel(BaseModel):
+    '''
+    Note: 
+        - The author use the model for inference, by first created using `create_model` in `./models/models/py`.
+        The model `fsModel` in `./models/projected_model.py` is used for training, as in train.py.
+    '''
     def name(self):
         return 'fsModel'
 
@@ -66,6 +71,9 @@ class fsModel(BaseModel):
         self.netArc = self.netArc.to(device)
         self.netArc.eval()
 
+        # NOTE: The code block has a bug that ALWAYS ignores opt.load_pretrain; 
+        # the script always load from default checkpoint directory as specified in
+        # ./options/base_options.py
         if not self.isTrain:
             pretrained_path = '' if not self.isTrain else opt.load_pretrain
             self.load_network(self.netG, 'G', opt.which_epoch, pretrained_path)
@@ -145,6 +153,22 @@ class fsModel(BaseModel):
         return torch.sum(x1 * x2, dim=1) / (torch.norm(x1, dim=1) * torch.norm(x2, dim=1))
 
     def forward(self, img_id, img_att, latent_id, latent_att, for_G=False):
+        """
+        Note: 
+            - The forward so far only being used for inference.
+            - The forward having code to compute all losses and return them, but
+            the section is not used in the script `train.py`.
+        
+        Args:
+            img_id (TYPE): Never used in the model.
+            img_att (TYPE): Description
+            latent_id (TYPE): Description
+            latent_att (TYPE): Never used in the model
+            for_G (bool, optional): Description
+        
+        Returns:
+            TYPE: Description
+        """
         loss_D_fake, loss_D_real, loss_D_GP = 0, 0, 0
         loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_G_ID, loss_G_Rec = 0,0,0,0,0
 
