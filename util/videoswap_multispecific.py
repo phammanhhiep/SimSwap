@@ -139,8 +139,6 @@ def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id
                     else:
                         pass
 
-
-
                 if len(swap_result_list) !=0:
                     
                     reverse2wholeimage(swap_result_ori_pic_list,swap_result_list, swap_result_matrix_list, crop_size, frame, logoclass,\
