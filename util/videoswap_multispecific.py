@@ -28,7 +28,6 @@ def _totensor(array):
 
     img = Image.fromarray(array)
     img = transforms.ToTensor()(img)
-    img = img.float().div(255) # TODO: check effect of the step
     return img    
 
 
