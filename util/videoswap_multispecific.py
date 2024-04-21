@@ -14,11 +14,22 @@ from util.add_watermark import watermark_image
 from util.norm import SpecificNorm
 import torch.nn.functional as F
 from parsing_model.model import BiSeNet
+from PIL import Image
+from torchvision import transforms
+
 
 def _totensor(array):
-    tensor = torch.from_numpy(array)
-    img = tensor.transpose(0, 1).transpose(0, 2).contiguous()
-    return img.float().div(255)
+    """My Note:
+        - The comment code is cumbersome. 
+    """
+    # tensor = torch.from_numpy(array)
+    # img = tensor.transpose(0, 1).transpose(0, 2).contiguous()
+    # return img.float().div(255)
+
+    img = Image.fromarray(array)
+    img = transforms.ToTensor()(img)
+    img = img.float().div(255) # TODO: check effect of the step
+    return img    
 
 
 def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id_thres, swap_model, detect_model, save_path, temp_results_dir='./temp_results', crop_size=224, no_simswaplogo = False,use_mask =False):
@@ -97,11 +108,13 @@ def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id
                 # Preprocess frame and compare id of source and those in frames
                 for frame_align_crop in frame_align_crop_list:
 
-                    # BGR TO RGB
-                    # frame_align_crop_RGB = frame_align_crop[...,::-1]
+                    '''My note: 
+                        - TODO: a Frame is preprocessed different from the target and source face images.
+                        Either the author copy paste code from different sources, or the procedures 
+                        are required somewhere. Need to investigate.
 
+                    '''
                     frame_align_crop_tenor = _totensor(cv2.cvtColor(frame_align_crop,cv2.COLOR_BGR2RGB))[None,...].cuda()
- 
                     frame_align_crop_tenor_arcnorm = spNorm(frame_align_crop_tenor)
                     frame_align_crop_tenor_arcnorm_downsample = F.interpolate(frame_align_crop_tenor_arcnorm, size=(112,112))
                     frame_align_crop_crop_id_nonorm = swap_model.netArc(frame_align_crop_tenor_arcnorm_downsample)
