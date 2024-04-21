@@ -106,15 +106,9 @@ def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id
 
                 # Preprocess frame and compare id of source and those in frames
                 for frame_align_crop in frame_align_crop_list:
-
-                    '''My note: 
-                        - TODO: a Frame is preprocessed different from the target and source face images.
-                        Either the author copy paste code from different sources, or the procedures 
-                        are required somewhere. Need to investigate.
-
-                    '''
                     frame_align_crop_tenor = _totensor(cv2.cvtColor(frame_align_crop,cv2.COLOR_BGR2RGB))[None,...].cuda()
-                    frame_align_crop_tenor_arcnorm = spNorm(frame_align_crop_tenor)
+                    # My Note: result with or without spNorm is the same; possible to not use spNorm with all the input images
+                    frame_align_crop_tenor_arcnorm = spNorm(frame_align_crop_tenor) 
                     frame_align_crop_tenor_arcnorm_downsample = F.interpolate(frame_align_crop_tenor_arcnorm, size=(112,112))
                     frame_align_crop_crop_id_nonorm = swap_model.netArc(frame_align_crop_tenor_arcnorm_downsample)
                     id_compare_values.append([])
