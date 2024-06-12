@@ -249,7 +249,7 @@ if __name__ == '__main__':
             if opt.use_tensorboard:
                 for tag, value in errors.items():
                     logger.add_scalar(tag, value, step)
-            message = '{}: (step {}) '.format(datetime.now().strftime('%H:%M:%S'), step)
+            message = '{}: (step {}) '.format(datetime.datetime.now().strftime('%H:%M:%S'), step)
             for k, v in errors.items():
                 message += '%s: %.3f ' % (k, v)
 
