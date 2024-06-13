@@ -119,6 +119,7 @@ if __name__ == '__main__':
     if not os.path.exists(log_path):
         os.makedirs(log_path)
 
+    # NOTE: `start_epoch` and `epoch_iter` are not used.
     if opt.continue_train:
         try:
             start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
@@ -180,32 +181,37 @@ if __name__ == '__main__':
         model.netG.train()
         for interval in range(2):
             random.shuffle(randindex)
+            '''My Note: even though called both lists of images as src (or source), 
+                the first list is used as target images, the second as source images 
+                in a faceswap app.
+            '''
             src_image1, src_image2  = train_loader.next()
             
             if step%2 == 0:
                 img_id = src_image2
             else:
-                img_id = src_image2[randindex] # TODO: ???
+                img_id = src_image2[randindex] # My Note: shuffle source images 
 
             img_id_112      = F.interpolate(img_id,size=(112,112), mode='bicubic')
             latent_id       = model.netArc(img_id_112)
             latent_id       = F.normalize(latent_id, p=2, dim=1)
-            # Train discriminator
-            if interval:
+            
+            if interval: # Train discriminator
                 
                 img_fake        = model.netG(src_image1, latent_id)
                 gen_logits,_    = model.netD(img_fake.detach(), None)
                 loss_Dgen       = (F.relu(torch.ones_like(gen_logits) + gen_logits)).mean()
 
-                real_logits,_   = model.netD(src_image2,None) # NOTE: source is used to train discriminator, in constrast Faceshifter use target.
+                # My note: source images are used to train discriminator, in constrast Faceshifter use target images.
+                real_logits,_   = model.netD(src_image2,None)
                 loss_Dreal      = (F.relu(torch.ones_like(real_logits) - real_logits)).mean()
 
                 loss_D          = loss_Dgen + loss_Dreal
                 optimizer_D.zero_grad()
                 loss_D.backward()
                 optimizer_D.step()
-            # Train generator
-            else:
+            
+            else: # Train generator
                 
                 # model.netD.requires_grad_(True)
                 img_fake        = model.netG(src_image1, latent_id)
@@ -222,7 +228,7 @@ if __name__ == '__main__':
                 loss_G          = loss_Gmain * opt.lambda_gmain + loss_G_ID * opt.lambda_id + feat_match_loss * opt.lambda_feat
                 
 
-                if step%2 == 0:
+                if step%2 == 0: # source images are not shuffled in the case and thus need to include reconstruction loss
                     #G_Rec
                     loss_G_Rec  = model.criterionRec(img_fake, src_image1) * opt.lambda_rec
                     loss_G      += loss_G_Rec

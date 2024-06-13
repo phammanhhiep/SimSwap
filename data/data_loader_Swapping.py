@@ -21,6 +21,8 @@ class data_prefetcher():
         self.preload()
 
     def preload(self):
+        """Load beforehand two images to use in the next iteration.  
+        """
         try:
             self.src_image1, self.src_image2 = next(self.dataiter)
         except StopIteration:
@@ -62,7 +64,11 @@ class SwappingDataset(data.Dataset):
         self.num_images = len(self.dataset)
 
     def preprocess(self):
-        """Preprocess the Swapping dataset."""
+        """
+            Preprocess the Swapping dataset.
+            My Note: the `dataset` is a list of lists, each of inner lists 
+                contains images of the same person.  
+        """
         print("processing Swapping dataset images...")
 
         temp_path   = os.path.join(self.image_dir,'*/')
@@ -80,7 +86,11 @@ class SwappingDataset(data.Dataset):
         print('Finished preprocessing the Swapping dataset, total dirs number: %d...'%len(self.dataset))
              
     def __getitem__(self, index):
-        """Return two src domain images and two dst domain images."""
+        """
+            Return two src domain images and two dst domain images.
+            My note: the function return two images in the same directory; which
+                mean it return images of the same person. Why ??? 
+        """
         dir_tmp1        = self.dataset[index]
         dir_tmp1_len    = len(dir_tmp1)
 
