@@ -293,7 +293,7 @@ if __name__ == '__main__':
                 plot_batch(imgs, os.path.join(sample_path, 'step_'+str(step+1)+'.jpg'))
 
         ### save latest model
-        if (step+1) % opt.model_freq==0:
+        if (step+1) % opt.model_freq==0 or (step+1) == total_step:
             print('saving the latest model (steps %d)' % (step+1))
             model.save(step+1)            
             np.savetxt(iter_path, (step+1, total_step), delimiter=',', fmt='%d')
