@@ -297,4 +297,3 @@ if __name__ == '__main__':
             print('saving the latest model (steps %d)' % (step+1))
             model.save(step+1)            
             np.savetxt(iter_path, (step+1, total_step), delimiter=',', fmt='%d')
-    wandb.finish()
