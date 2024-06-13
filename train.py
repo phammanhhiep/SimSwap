@@ -264,11 +264,12 @@ if __name__ == '__main__':
                 log_file.write('%s\n' % message)
 
         ### display output images
+        # My Note: since every images in src_image1 are also in src_image2, no need to append src_image2 in the to output.
         if (step + 1) % opt.sample_freq == 0:
             model.netG.eval()
             with torch.no_grad():
                 imgs        = list()
-                zero_img    = (torch.zeros_like(src_image1[0,...]))
+                zero_img    = (torch.zeros_like(src_image1[0,...])) # My Note: see the output for the reason of the black image
                 imgs.append(zero_img.cpu().numpy())
                 save_img    = ((src_image1.cpu())* imagenet_std + imagenet_mean).numpy()
                 for r in range(opt.batchSize):
@@ -277,9 +278,10 @@ if __name__ == '__main__':
                 id_vector_src1  = model.netArc(arcface_112)
                 id_vector_src1  = F.normalize(id_vector_src1, p=2, dim=1)
 
+                # My Note: swap every face in src_image1 with every face in the same list. 
+                # My Note: with the setup, source faces in the first row, and target faces are in the first column
                 for i in range(opt.batchSize):
-                    
-                    imgs.append(save_img[i,...])
+                    imgs.append(save_img[i,...]) 
                     image_infer = src_image1[i, ...].repeat(opt.batchSize, 1, 1, 1)
                     img_fake    = model.netG(image_infer, id_vector_src1).cpu()
                     
