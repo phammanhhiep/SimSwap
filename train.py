@@ -119,7 +119,8 @@ if __name__ == '__main__':
     if not os.path.exists(log_path):
         os.makedirs(log_path)
 
-    # NOTE: `start_epoch` and `epoch_iter` are not used.
+    # NOTE: `start_epoch` and `epoch_iter` are used for logging.
+    # NOTE: the log is also misleading `epoch_iter` is the total number of steps, expected though not neccessarily completed, in previous training.
     if opt.continue_train:
         try:
             start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
@@ -175,127 +176,135 @@ if __name__ == '__main__':
     from util.logo_class import logo_class
     logo_class.print_start_training()
     model.netD.feature_network.requires_grad_(False)
+    step = 0
 
-    # Training Cycle
-    for step in range(start, total_step):
-        model.netG.train()
-        for interval in range(2):
-            random.shuffle(randindex)
-            '''My Note: even though called both lists of images as src (or source), 
-                the first list is used as target images, the second as source images 
-                in a faceswap app.
-            '''
-            src_image1, src_image2  = train_loader.next()
-            
-            if step%2 == 0:
-                img_id = src_image2
-            else:
-                img_id = src_image2[randindex] # My Note: shuffle source images 
-
-            img_id_112      = F.interpolate(img_id,size=(112,112), mode='bicubic')
-            latent_id       = model.netArc(img_id_112)
-            latent_id       = F.normalize(latent_id, p=2, dim=1)
-            
-            if interval: # Train discriminator
+    try:
+        # Training Cycle
+        for step in range(start, total_step):
+            model.netG.train()
+            for interval in range(2):
+                random.shuffle(randindex)
+                '''My Note: even though called both lists of images as src (or source), 
+                    the first list is used as target images, the second as source images 
+                    in a faceswap app.
+                '''
+                src_image1, src_image2  = train_loader.next()
                 
-                img_fake        = model.netG(src_image1, latent_id)
-                gen_logits,_    = model.netD(img_fake.detach(), None)
-                loss_Dgen       = (F.relu(torch.ones_like(gen_logits) + gen_logits)).mean()
+                if step%2 == 0:
+                    img_id = src_image2
+                else:
+                    img_id = src_image2[randindex] # My Note: shuffle source images 
 
-                # My note: source images are used to train discriminator, in constrast Faceshifter use target images.
-                real_logits,_   = model.netD(src_image2,None)
-                loss_Dreal      = (F.relu(torch.ones_like(real_logits) - real_logits)).mean()
-
-                loss_D          = loss_Dgen + loss_Dreal
-                optimizer_D.zero_grad()
-                loss_D.backward()
-                optimizer_D.step()
-            
-            else: # Train generator
+                img_id_112      = F.interpolate(img_id,size=(112,112), mode='bicubic')
+                latent_id       = model.netArc(img_id_112)
+                latent_id       = F.normalize(latent_id, p=2, dim=1)
                 
-                # model.netD.requires_grad_(True)
-                img_fake        = model.netG(src_image1, latent_id)
-                # G loss
-                gen_logits,feat = model.netD(img_fake, None)
-                
-                loss_Gmain      = (-gen_logits).mean()
-                img_fake_down   = F.interpolate(img_fake, size=(112,112), mode='bicubic')
-                latent_fake     = model.netArc(img_fake_down)
-                latent_fake     = F.normalize(latent_fake, p=2, dim=1)
-                loss_G_ID       = (1 - model.cosin_metric(latent_fake, latent_id)).mean()
-                real_feat       = model.netD.get_feature(src_image1)
-                feat_match_loss = model.criterionFeat(feat["3"],real_feat["3"]) 
-                loss_G          = loss_Gmain * opt.lambda_gmain + loss_G_ID * opt.lambda_id + feat_match_loss * opt.lambda_feat
-                
-
-                if step%2 == 0: # source images are not shuffled in the case and thus need to include reconstruction loss
-                    #G_Rec
-                    loss_G_Rec  = model.criterionRec(img_fake, src_image1) * opt.lambda_rec
-                    loss_G      += loss_G_Rec
-
-                optimizer_G.zero_grad()
-                loss_G.backward()
-                optimizer_G.step()
-                
-
-        ############## Display results and errors ##########
-        ### print out errors
-        # Print out log info
-        if (step + 1) % opt.log_frep == 0:
-            # errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
-            errors = {
-                "G_Loss":loss_Gmain.item(),
-                "G_ID":loss_G_ID.item(),
-                "G_Rec":loss_G_Rec.item(),
-                "G_feat_match":feat_match_loss.item(),
-                "D_fake":loss_Dgen.item(),
-                "D_real":loss_Dreal.item(),
-                "D_loss":loss_D.item()
-            }
-            if opt.use_tensorboard:
-                for tag, value in errors.items():
-                    logger.add_scalar(tag, value, step)
-            message = '{}: (step {}) '.format(datetime.datetime.now().strftime('%H:%M:%S'), step)
-            for k, v in errors.items():
-                message += '%s: %.3f ' % (k, v)
-
-            print(message)
-            with open(log_name, "a") as log_file:
-                log_file.write('%s\n' % message)
-
-        ### display output images
-        # My Note: since every images in src_image1 are also in src_image2, no need to append src_image2 in the to output.
-        if (step + 1) % opt.sample_freq == 0:
-            model.netG.eval()
-            with torch.no_grad():
-                imgs        = list()
-                zero_img    = (torch.zeros_like(src_image1[0,...])) # My Note: see the output for the reason of the black image
-                imgs.append(zero_img.cpu().numpy())
-                save_img    = ((src_image1.cpu())* imagenet_std + imagenet_mean).numpy()
-                for r in range(opt.batchSize):
-                    imgs.append(save_img[r,...])
-                arcface_112     = F.interpolate(src_image2,size=(112,112), mode='bicubic')
-                id_vector_src1  = model.netArc(arcface_112)
-                id_vector_src1  = F.normalize(id_vector_src1, p=2, dim=1)
-
-                # My Note: swap every face in src_image1 with every face in the same list. 
-                # My Note: with the setup, source faces in the first row, and target faces are in the first column
-                for i in range(opt.batchSize):
-                    imgs.append(save_img[i,...]) 
-                    image_infer = src_image1[i, ...].repeat(opt.batchSize, 1, 1, 1)
-                    img_fake    = model.netG(image_infer, id_vector_src1).cpu()
+                if interval: # Train discriminator
                     
-                    img_fake    = img_fake * imagenet_std
-                    img_fake    = img_fake + imagenet_mean
-                    img_fake    = img_fake.numpy()
-                    for j in range(opt.batchSize):
-                        imgs.append(img_fake[j,...])
-                print("Save test data")
-                imgs = np.stack(imgs, axis = 0).transpose(0,2,3,1)
-                plot_batch(imgs, os.path.join(sample_path, 'step_'+str(step+1)+'.jpg'))
+                    img_fake        = model.netG(src_image1, latent_id)
+                    gen_logits,_    = model.netD(img_fake.detach(), None)
+                    loss_Dgen       = (F.relu(torch.ones_like(gen_logits) + gen_logits)).mean()
 
-        ### save latest model
-        if (step+1) % opt.model_freq==0 or (step+1) == total_step:
+                    # My note: source images are used to train discriminator, in constrast Faceshifter use target images.
+                    real_logits,_   = model.netD(src_image2,None)
+                    loss_Dreal      = (F.relu(torch.ones_like(real_logits) - real_logits)).mean()
+
+                    loss_D          = loss_Dgen + loss_Dreal
+                    optimizer_D.zero_grad()
+                    loss_D.backward()
+                    optimizer_D.step()
+                
+                else: # Train generator
+                    
+                    # model.netD.requires_grad_(True)
+                    img_fake        = model.netG(src_image1, latent_id)
+                    # G loss
+                    gen_logits,feat = model.netD(img_fake, None)
+                    
+                    loss_Gmain      = (-gen_logits).mean()
+                    img_fake_down   = F.interpolate(img_fake, size=(112,112), mode='bicubic')
+                    latent_fake     = model.netArc(img_fake_down)
+                    latent_fake     = F.normalize(latent_fake, p=2, dim=1)
+                    loss_G_ID       = (1 - model.cosin_metric(latent_fake, latent_id)).mean()
+                    real_feat       = model.netD.get_feature(src_image1)
+                    feat_match_loss = model.criterionFeat(feat["3"],real_feat["3"]) 
+                    loss_G          = loss_Gmain * opt.lambda_gmain + loss_G_ID * opt.lambda_id + feat_match_loss * opt.lambda_feat
+                    
+
+                    if step%2 == 0: # source images are not shuffled in the case and thus need to include reconstruction loss
+                        #G_Rec
+                        loss_G_Rec  = model.criterionRec(img_fake, src_image1) * opt.lambda_rec
+                        loss_G      += loss_G_Rec
+
+                    optimizer_G.zero_grad()
+                    loss_G.backward()
+                    optimizer_G.step()
+                    
+
+            ############## Display results and errors ##########
+            ### print out errors
+            # Print out log info
+            if (step + 1) % opt.log_frep == 0:
+                # errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
+                errors = {
+                    "G_Loss":loss_Gmain.item(),
+                    "G_ID":loss_G_ID.item(),
+                    "G_Rec":loss_G_Rec.item(),
+                    "G_feat_match":feat_match_loss.item(),
+                    "D_fake":loss_Dgen.item(),
+                    "D_real":loss_Dreal.item(),
+                    "D_loss":loss_D.item()
+                }
+                if opt.use_tensorboard:
+                    for tag, value in errors.items():
+                        logger.add_scalar(tag, value, step)
+                message = '{}: (step {}) '.format(datetime.datetime.now().strftime('%H:%M:%S'), step)
+                for k, v in errors.items():
+                    message += '%s: %.3f ' % (k, v)
+
+                print(message)
+                with open(log_name, "a") as log_file:
+                    log_file.write('%s\n' % message)
+
+            ### display output images
+            # My Note: since every images in src_image1 are also in src_image2, no need to append src_image2 in the to output.
+            if (step + 1) % opt.sample_freq == 0:
+                model.netG.eval()
+                with torch.no_grad():
+                    imgs        = list()
+                    zero_img    = (torch.zeros_like(src_image1[0,...])) # My Note: see the output for the reason of the black image
+                    imgs.append(zero_img.cpu().numpy())
+                    save_img    = ((src_image1.cpu())* imagenet_std + imagenet_mean).numpy()
+                    for r in range(opt.batchSize):
+                        imgs.append(save_img[r,...])
+                    arcface_112     = F.interpolate(src_image2,size=(112,112), mode='bicubic')
+                    id_vector_src1  = model.netArc(arcface_112)
+                    id_vector_src1  = F.normalize(id_vector_src1, p=2, dim=1)
+
+                    # My Note: swap every face in src_image1 with every face in the same list. 
+                    # My Note: with the setup, source faces in the first row, and target faces are in the first column
+                    for i in range(opt.batchSize):
+                        imgs.append(save_img[i,...]) 
+                        image_infer = src_image1[i, ...].repeat(opt.batchSize, 1, 1, 1)
+                        img_fake    = model.netG(image_infer, id_vector_src1).cpu()
+                        
+                        img_fake    = img_fake * imagenet_std
+                        img_fake    = img_fake + imagenet_mean
+                        img_fake    = img_fake.numpy()
+                        for j in range(opt.batchSize):
+                            imgs.append(img_fake[j,...])
+                    print("Save test data")
+                    imgs = np.stack(imgs, axis = 0).transpose(0,2,3,1)
+                    plot_batch(imgs, os.path.join(sample_path, 'step_'+str(step+1)+'.jpg'))
+
+            ### save latest model
+            if (step+1) % opt.model_freq==0 or (step+1) == total_step:
+                print('saving the latest model (steps %d)' % (step+1))
+                model.save(step+1)            
+                np.savetxt(iter_path, (step+1, total_step), delimiter=',', fmt='%d')
+    except Exception as e:
+        print(e)
+        if(step+1 >= opt.model_freq):
             print('saving the latest model (steps %d)' % (step+1))
             model.save(step+1)            
             np.savetxt(iter_path, (step+1, total_step), delimiter=',', fmt='%d')
