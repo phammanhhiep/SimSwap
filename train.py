@@ -105,41 +105,30 @@ class TrainOptions:
 
 
 if __name__ == '__main__':
-
     opt         = TrainOptions().parse()
     iter_path   = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
-
     sample_path = os.path.join(opt.checkpoints_dir, opt.name, 'samples')
-
     if not os.path.exists(sample_path):
         os.makedirs(sample_path)
-    
     log_path = os.path.join(opt.checkpoints_dir, opt.name, 'summary')
-
     if not os.path.exists(log_path):
         os.makedirs(log_path)
 
-    # NOTE: `start_epoch` and `epoch_iter` are used for logging.
+    # NOTE: `start_epoch` and `epoch_iter` are ONLY used for logging.
     # NOTE: the log is also misleading `epoch_iter` is the total number of steps, expected though not neccessarily completed, in previous training.
     if opt.continue_train:
         try:
             start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
         except:
             start_epoch, epoch_iter = 1, 0
-        print('Resuming from epoch %d at iteration %d' % (start_epoch, epoch_iter))        
-    else:    
-        start_epoch, epoch_iter = 1, 0
+        finally:
+            print('Resuming from epoch %d at iteration %d' % (start_epoch, epoch_iter))
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(opt.gpu_ids)
     print("GPU used : ", str(opt.gpu_ids))
-
-    
-    cudnn.benchmark = True
-
-    
+    cudnn.benchmark = True # My note: to auto select best algorithm for the GPU; not worth if model changes at different iterations (e.g. dropout)
 
     model = fsModel()
-
     model.initialize(opt)
 
     #####################################################
@@ -305,6 +294,6 @@ if __name__ == '__main__':
     except Exception as e:
         print(e)
         if(step+1 >= opt.model_freq):
-            print('saving the latest model (steps %d)' % (step+1))
+            print('Got exception. Saving the latest model (steps %d)' % (step+1))
             model.save(step+1)            
             np.savetxt(iter_path, (step+1, total_step), delimiter=',', fmt='%d')

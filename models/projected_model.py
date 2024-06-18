@@ -19,6 +19,7 @@ from .fs_networks_fix import Generator_Adain_Upsample
 
 from pg_modules.projected_discriminator import ProjectedDiscriminator
 
+
 def compute_grad2(d_out, x_in):
     batch_size = x_in.size(0)
     grad_dout = torch.autograd.grad(
@@ -30,6 +31,7 @@ def compute_grad2(d_out, x_in):
     reg = grad_dout2.view(batch_size, -1).sum(1)
     return reg
 
+
 class fsModel(BaseModel):
     def name(self):
         return 'fsModel'
@@ -39,6 +41,7 @@ class fsModel(BaseModel):
         # if opt.resize_or_crop != 'none' or not opt.isTrain:  # when training at full res this causes OOM
         self.isTrain = opt.isTrain
 
+        # My note: in inference different generators are used. See ./fs_model.py.
         # Generator network
         self.netG = Generator_Adain_Upsample(input_nc=3, output_nc=3, latent_size=512, n_blocks=9, deep=opt.Gdeep)
         self.netG.cuda()
@@ -89,8 +92,6 @@ class fsModel(BaseModel):
         #return np.dot(x1, x2) / (np.linalg.norm(x1) * np.linalg.norm(x2))
         return torch.sum(x1 * x2, dim=1) / (torch.norm(x1, dim=1) * torch.norm(x2, dim=1))
 
-
-
     def save(self, which_epoch):
         self.save_network(self.netG, 'G', which_epoch)
         self.save_network(self.netD, 'D', which_epoch)
@@ -109,6 +110,10 @@ class fsModel(BaseModel):
             print('------------ Now also finetuning global generator -----------')
 
     def update_learning_rate(self):
+        '''
+        My Note: it is not used anywhere in the project; the method is not 
+            implemented in BaseModel and torch.nn.Module
+        '''
         lrd = self.opt.lr / self.opt.niter_decay
         lr = self.old_lr - lrd
         for param_group in self.optimizer_D.param_groups:
