@@ -55,7 +55,7 @@ class fsModel(BaseModel):
         self.netArc.requires_grad_(False)
         if not self.isTrain:
             pretrained_path =  opt.checkpoints_dir
-            self.load_network(self.netG, 'G', opt.which_epoch, pretrained_path)
+            self.load_network(self.netG, 'G', opt.which_step, pretrained_path)
             return
         self.netD = ProjectedDiscriminator(diffaug=False, interp224=False, **{})
         # self.netD.feature_network.requires_grad_(False)
@@ -82,23 +82,23 @@ class fsModel(BaseModel):
         if opt.continue_train:
             pretrained_path = '' if not self.isTrain else opt.load_pretrain
             # print (pretrained_path)
-            self.load_network(self.netG, 'G', opt.which_epoch, pretrained_path)
-            self.load_network(self.netD, 'D', opt.which_epoch, pretrained_path)
-            self.load_optim(self.optimizer_G, 'G', opt.which_epoch, pretrained_path)
-            self.load_optim(self.optimizer_D, 'D', opt.which_epoch, pretrained_path)
+            self.load_network(self.netG, 'G', opt.which_step, pretrained_path)
+            self.load_network(self.netD, 'D', opt.which_step, pretrained_path)
+            self.load_optim(self.optimizer_G, 'G', opt.which_step, pretrained_path)
+            self.load_optim(self.optimizer_D, 'D', opt.which_step, pretrained_path)
         torch.cuda.empty_cache()
 
     def cosin_metric(self, x1, x2):
         #return np.dot(x1, x2) / (np.linalg.norm(x1) * np.linalg.norm(x2))
         return torch.sum(x1 * x2, dim=1) / (torch.norm(x1, dim=1) * torch.norm(x2, dim=1))
 
-    def save(self, which_epoch):
-        self.save_network(self.netG, 'G', which_epoch)
-        self.save_network(self.netD, 'D', which_epoch)
-        self.save_optim(self.optimizer_G, 'G', which_epoch)
-        self.save_optim(self.optimizer_D, 'D', which_epoch)
+    def save(self, which_step):
+        self.save_network(self.netG, 'G', which_step)
+        self.save_network(self.netD, 'D', which_step)
+        self.save_optim(self.optimizer_G, 'G', which_step)
+        self.save_optim(self.optimizer_D, 'D', which_step)
         '''if self.gen_features:
-            self.save_network(self.netE, 'E', which_epoch, self.gpu_ids)'''
+            self.save_network(self.netE, 'E', which_step, self.gpu_ids)'''
 
     def update_fixed_params(self):
         # after fixing the global generator for a number of iterations, also start finetuning it

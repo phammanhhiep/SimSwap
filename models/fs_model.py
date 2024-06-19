@@ -76,7 +76,7 @@ class fsModel(BaseModel):
         # ./options/base_options.py
         if not self.isTrain:
             pretrained_path = '' if not self.isTrain else opt.load_pretrain
-            self.load_network(self.netG, 'G', opt.which_epoch, pretrained_path)
+            self.load_network(self.netG, 'G', opt.which_step, pretrained_path)
             return
 
         # Discriminator network
@@ -97,9 +97,9 @@ class fsModel(BaseModel):
         if opt.continue_train or opt.load_pretrain:
             pretrained_path = '' if not self.isTrain else opt.load_pretrain
             # print (pretrained_path)
-            self.load_network(self.netG, 'G', opt.which_epoch, pretrained_path)
-            self.load_network(self.netD1, 'D1', opt.which_epoch, pretrained_path)
-            self.load_network(self.netD2, 'D2', opt.which_epoch, pretrained_path)
+            self.load_network(self.netG, 'G', opt.which_step, pretrained_path)
+            self.load_network(self.netD1, 'D1', opt.which_step, pretrained_path)
+            self.load_network(self.netD2, 'D2', opt.which_step, pretrained_path)
 
 
 
@@ -236,12 +236,12 @@ class fsModel(BaseModel):
                 img_fake]
 
 
-    def save(self, which_epoch):
-        self.save_network(self.netG, 'G', which_epoch, self.gpu_ids)
-        self.save_network(self.netD1, 'D1', which_epoch, self.gpu_ids)
-        self.save_network(self.netD2, 'D2', which_epoch, self.gpu_ids)
+    def save(self, which_step):
+        self.save_network(self.netG, 'G', which_step, self.gpu_ids)
+        self.save_network(self.netD1, 'D1', which_step, self.gpu_ids)
+        self.save_network(self.netD2, 'D2', which_step, self.gpu_ids)
         '''if self.gen_features:
-            self.save_network(self.netE, 'E', which_epoch, self.gpu_ids)'''
+            self.save_network(self.netE, 'E', which_step, self.gpu_ids)'''
 
     def update_fixed_params(self):
         # after fixing the global generator for a number of iterations, also start finetuning it

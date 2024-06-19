@@ -53,7 +53,7 @@ if __name__ == '__main__':
     torch.nn.Module.dump_patches = True
 
     if crop_size == 512:
-        opt.which_epoch = 550000
+        opt.which_step = 550000
         opt.name = '512'
         mode = 'ffhq'
     else:

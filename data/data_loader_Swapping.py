@@ -89,7 +89,8 @@ class SwappingDataset(data.Dataset):
         """
             Return two src domain images and two dst domain images.
             My note: the function return two images in the same directory; which
-                mean it return images of the same person. Why ??? 
+                mean it return images of the same person, so that in a batch of images,
+                it is easy to train on images of the same person. 
         """
         dir_tmp1        = self.dataset[index]
         dir_tmp1_len    = len(dir_tmp1)

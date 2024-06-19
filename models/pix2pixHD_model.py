@@ -55,11 +55,11 @@ class Pix2PixHDModel(BaseModel):
         # load networks
         if not self.isTrain or opt.continue_train or opt.load_pretrain:
             pretrained_path = '' if not self.isTrain else opt.load_pretrain
-            self.load_network(self.netG, 'G', opt.which_epoch, pretrained_path)            
+            self.load_network(self.netG, 'G', opt.which_step, pretrained_path)            
             if self.isTrain:
-                self.load_network(self.netD, 'D', opt.which_epoch, pretrained_path)  
+                self.load_network(self.netD, 'D', opt.which_step, pretrained_path)  
             if self.gen_features:
-                self.load_network(self.netE, 'E', opt.which_epoch, pretrained_path)              
+                self.load_network(self.netE, 'E', opt.which_step, pretrained_path)              
 
         # set loss functions and optimizers
         if self.isTrain:
@@ -270,11 +270,11 @@ class Pix2PixHDModel(BaseModel):
         else:
             return edge.float()
 
-    def save(self, which_epoch):
-        self.save_network(self.netG, 'G', which_epoch, self.gpu_ids)
-        self.save_network(self.netD, 'D', which_epoch, self.gpu_ids)
+    def save(self, which_step):
+        self.save_network(self.netG, 'G', which_step, self.gpu_ids)
+        self.save_network(self.netD, 'D', which_step, self.gpu_ids)
         if self.gen_features:
-            self.save_network(self.netE, 'E', which_epoch, self.gpu_ids)
+            self.save_network(self.netE, 'E', which_step, self.gpu_ids)
 
     def update_fixed_params(self):
         # after fixing the global generator for a number of iterations, also start finetuning it

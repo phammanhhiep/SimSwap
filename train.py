@@ -52,7 +52,7 @@ class TrainOptions:
         self.parser.add_argument('--dataset', type=str, default="/path/to/VGGFace2", help='path to the face swapping dataset')
         self.parser.add_argument('--continue_train', type=str2bool, default='False', help='continue training: load the latest model')
         self.parser.add_argument('--load_pretrain', type=str, default='./checkpoints/simswap224_test', help='load the pretrained model from the specified location')
-        self.parser.add_argument('--which_epoch', type=str, default='10000', help='which epoch to load? set to latest to use latest cached model')
+        self.parser.add_argument('--which_step', type=str, default='10000', help='which epoch to load? set to latest to use latest cached model')
         self.parser.add_argument('--phase', type=str, default='train', help='train, val, test, etc')
         self.parser.add_argument('--niter', type=int, default=10000, help='# of iter at starting learning rate')
         self.parser.add_argument('--niter_decay', type=int, default=10000, help='# of iter to linearly decay learning rate to zero')
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     if not opt.continue_train:
         start   = 0
     else:
-        start   = int(opt.which_epoch)
+        start   = int(opt.which_step)
     total_step  = opt.total_step
     import datetime
     print("Start to train at %s"%(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
@@ -219,7 +219,7 @@ if __name__ == '__main__':
                     feat_match_loss = model.criterionFeat(feat["3"],real_feat["3"]) 
                     loss_G          = loss_Gmain * opt.lambda_gmain + loss_G_ID * opt.lambda_id + feat_match_loss * opt.lambda_feat
                     
-
+                    # My Note: same images are trained at every two steps (very often) in the model; in constrast to Faceshiter model.
                     if step%2 == 0: # source images are not shuffled in the case and thus need to include reconstruction loss
                         #G_Rec
                         loss_G_Rec  = model.criterionRec(img_fake, src_image1) * opt.lambda_rec

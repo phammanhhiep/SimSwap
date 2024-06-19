@@ -26,7 +26,7 @@ class UIModel(BaseModel):
         self.netG = networks.define_G(netG_input_nc, opt.output_nc, opt.ngf, opt.netG, 
                                       opt.n_downsample_global, opt.n_blocks_global, opt.n_local_enhancers, 
                                       opt.n_blocks_local, opt.norm, gpu_ids=self.gpu_ids)            
-        self.load_network(self.netG, 'G', opt.which_epoch)
+        self.load_network(self.netG, 'G', opt.which_step)
 
         print('---------- Networks initialized -------------')
 
