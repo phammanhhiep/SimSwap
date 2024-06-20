@@ -83,11 +83,16 @@ class SwappingDataset(data.Dataset):
        
   def __getitem__(self, index):
     """
-    Use the same algorithm in Faceshifter to draw data. 
+    Use the same algorithm in Faceshifter to draw data. However, ensure that same
+      images are used at a constant drawing rate. 
     """
+    same_factor = 2
     num_imgs = len(self.dataset)
     t_idx = index % num_imgs
-    s_idx = random.randrange(num_imgs)
+    if index % same_factor == 0:
+      s_idx = t_idx
+    else:
+      s_idx = random.randrange(num_imgs)
     if t_idx == s_idx:
       same = torch.ones(1)
     else:
