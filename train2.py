@@ -286,6 +286,7 @@ if __name__ == '__main__':
         model.save(step+1)            
         np.savetxt(iter_path, (step+1, total_step), delimiter=',', fmt='%d')
   except Exception as e:
+    # TODO: verify model is saved in exception
     print(e)
     if(step+1 >= opt.model_freq):
       print('Got exception. Saving the latest model (steps %d)' % (step+1))
