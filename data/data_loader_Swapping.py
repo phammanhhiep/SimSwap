@@ -26,7 +26,8 @@ class data_prefetcher():
         try:
             self.src_image1, self.src_image2 = next(self.dataiter)
         except StopIteration:
-            self.dataiter = iter(self.loader)
+            # My Note: shuffle property of loader is activated for every call if iter
+            self.dataiter = iter(self.loader) 
             self.src_image1, self.src_image2 = next(self.dataiter)
             
         with torch.cuda.stream(self.stream):
