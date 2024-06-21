@@ -118,16 +118,15 @@ if __name__ == '__main__':
     tensorboard_writer = tensorboard.SummaryWriter(log_path)
     logger = tensorboard_writer
 
-  # NOTE: `start_epoch` and `epoch_iter` are ONLY used for logging.
-  # NOTE: the log is also misleading `epoch_iter` is the total number of steps, expected though not neccessarily completed, in previous training.
-  if opt.continue_train:
-    try:
-      start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
-    except:
-      start_epoch, epoch_iter = 1, 0
-    finally:
-      print('Resuming from epoch %d at iteration %d' % (start_epoch, epoch_iter))
   print("Start to train at %s"%(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))      
+
+  # Determine the starting epoch. 
+  if not opt.continue_train:
+    start = 0
+  else:
+    start = int(opt.which_step)
+    print('Resuming from iteration: {}'.format(start))
+  total_step = opt.total_step  
 
   os.environ['CUDA_VISIBLE_DEVICES'] = str(opt.gpu_ids)
   print("GPU used : ", str(opt.gpu_ids))
@@ -154,13 +153,6 @@ if __name__ == '__main__':
 
   model.netD.feature_network.requires_grad_(False)
   step = 0
-
-  # Determine the starting epoch. 
-  if not opt.continue_train:
-    start = 0
-  else:
-    start = int(opt.which_step)
-  total_step = opt.total_step
 
   try:
     # Training Cycle
